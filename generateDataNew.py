@@ -18,7 +18,7 @@ def r(val):
     return int(np.random.random() * val)
 
 def random_scale(x,y):
-    ''' 对x随机scale,生成x-y之间的一个数'''
+    #对x随机scale,生成x-y之间的一个数
     gray_out = r(y+1-x) + x
     return gray_out
 
@@ -71,6 +71,7 @@ def tfactor(img):
 def Addblur(img, val):
     blur_kernel = random_scale(2,val)
     #print blur_kernel
+    #平滑图像
     img = cv2.blur(img,(blur_kernel,blur_kernel))
     return img
 
@@ -115,27 +116,44 @@ def rotRandrom(img, factor, size, bg_gray):
     return dst
 
 class GenText:
-    def __init__(self, ch_size=16,imgHeight=16,imgWidth=64,inter=0):
+    def __init__(self, ch_size=16,imgHeight=16,imgWidth=64,inter=0,bg_gray=-1,text_gray=-1,text_position=0,offset_left=-1):
         self.ch_size  = ch_size
         self.imgHeight = imgHeight
         self.imgWidth = imgWidth
         self.inter = inter
+        self.bg_gray = args.bg_gray
+        self.text_gray = args.text_gray
+        self.text_position = args.text_position
+        self.offset_left = args.offset_left
 
     def draw(self,val,font):
-        bg_gray = r(256) #随机生成背景灰度
-        #bg_gray = 0
-        text_gray = text_Gengray(bg_gray, 60)#生成前景灰度
-        #text_gray = random_scale(30,256)
-        text_position = random_scale(0,(self.imgHeight-self.ch_size)/2) #垂直方向文本位置
-        print 'text_pos: ',text_position
-        offset_left = int(np.random.random() * self.ch_size)
+        if self.bg_gray == -1:
+            bg_gray = r(256) #随机生成背景灰度
+        else: 
+            bg_gray = self.bg_gray
         
+        #bg_gray = 0
+        if self.text_gray == -1:
+            text_gray = text_Gengray(bg_gray, 60)#生成前景灰度
+        else: 
+            text_gray = self.text_gray
+        #text_gray = random_scale(30,256)
+        if self.text_position == 0:
+            text_position = random_scale(0,(self.imgHeight-self.ch_size)/2) #垂直方向文本位置
+        else: 
+            text_position = self.text_position
+        print 'text_pos: ',text_position
+        if self.offset_left == -1:
+            offset_left = int(np.random.random() * self.ch_size)
+        else :
+            offset_left = self.offset_left
         offset = offset_left
         ch_num = len(val)
         imgWidth = min(self.imgWidth,offset+ch_num*self.ch_size)
         img = np.array(Image.new("L", (imgWidth, self.imgHeight), bg_gray))
         base = offset_left
-
+        
+        #文本间隙
         if self.inter == 0:
             inter = random.randint(1,3)
         else:
@@ -178,12 +196,14 @@ class GenText:
 
     def generate(self,text,font):
         fg, bg_gray,fg_gray,txt = self.draw(text,font)
+        #旋转
         com = rot(fg,r(90)-45,fg.shape,45, bg_gray)
 
         #更换背景图片
         #com = self.changeBG(com,fg_gray,bgImg)
         #com = rotRandrom(fg,2,(fg.shape[1],fg.shape[0]), bg_gray)
         #com = tfactor(com)
+        #2 低通滤波器
         com = motionBlur(com,2)
         com = AddNoiseSingleChannel(com)
         if com.shape[1] < self.imgWidth:
@@ -199,11 +219,15 @@ class GenText:
  
   
 def genTextImg(args):
-	num = args.num
-	text_length = args.text_length
-	font_size = args.font_size
-	font_id = args.font_id
-	inter = args.inter
+        num = args.num
+        text_length = args.text_length
+        font_size = args.font_size
+        font_id = args.font_id
+        inter = args.inter
+        bg_gray = args.bg_gray
+        text_gray = args.text_gray
+        text_position = args.text_position
+        offset_left = args.offset_left
     
 	maxNum = 12
 	Gs = []
@@ -213,7 +237,8 @@ def genTextImg(args):
     # 随机设置font_size
 		font_sizes = [15,16,17,18,19,20] #font_sizes = [26,27,28,29,30]
 		for size in font_sizes:
-			Gs.append(GenText(size,size,(size)*(text_length)+inter*inter,inter))
+			size = size + inter
+			Gs.append(GenText(size,size,(size+1)*(text_length),inter))
 			tmp = []
 			tmp.append(ImageFont.truetype('./data/fonts/more_font/仿宋_GB2312.ttf',font_size))
 			tmp.append(ImageFont.truetype('./data/fonts/more_font/华文隶书.TTF',font_size))
@@ -226,7 +251,8 @@ def genTextImg(args):
 			fonts.append(tmp)
 	else:
 		for step in range(0,text_length,1) :
-			Gs.append(GenText(font_size,font_size,(font_size)*(text_length)+inter*inter,inter))
+			font_size=font_size + inter
+			Gs.append(GenText(font_size,font_size,(font_size+1)*(text_length-step),inter))
 			tmp = []
 			tmp.append(ImageFont.truetype('./data/fonts/more_font/仿宋_GB2312.ttf',font_size))
 			tmp.append(ImageFont.truetype('./data/fonts/more_font/华文隶书.TTF',font_size))
@@ -271,9 +297,9 @@ def genTextImg(args):
                             newline = ''
                             punc_count = 0
                             for ch in line:
-                                #if (ord(ch)>40869 or ord(ch)<19968)and ord(ch)!=12288:
-                                #    punc_count +=1
-                                #    print(ch)
+                                if (ord(ch)>40869 or ord(ch)<19968)and ord(ch)!=12288:
+                                    punc_count +=1
+                                    print(ch)
                                 if True and ord(ch)!=12288:
                                     newline += ch #字符如果在我的字库中，我才生成图像
                                 newline=newline.replace(" ","")
@@ -282,8 +308,8 @@ def genTextImg(args):
                             
                             if len(newline)<count:
                                     continue
-                            #if punc_count==text_length:
-                            #    break
+                            if punc_count==text_length:
+                                break
 
                             index += 1
                             print index,newline,len(newline), punc_count
@@ -293,7 +319,7 @@ def genTextImg(args):
                             writePath = '/home/jovyan//SynthText_Chinese/images/'+ filename
                             print writePath
                             Gid = random.randint(0,len(Gs)-1)
-                            #Gid = text_length-punc_count-1
+                            Gid = punc_count
                             
                             if font_id == 0:
                                 fontid = random.randint(0,len(fonts[Gid])-1)
@@ -315,8 +341,12 @@ if __name__ == '__main__':
 	parser.add_argument('--num',type=int,dest='num',default=10000,help='flag for the number of images')
 	parser.add_argument('--text_length',type=int,dest='text_length',default=0,help='flag for the length of text in the image, default means random????')
 	parser.add_argument('--font_size',type=int,dest='font_size',default=0,help='flag for the size of font')
-	parser.add_argument('--font_id',type=int,dest='font_id',default=0,help='flag for the type of font,range from 1 to 8 ,default means random')
+	parser.add_argument('--font_id',type=int,dest='font_id',default=0,help='flag for the type of font,range from 1 to 8, default means random')
 	parser.add_argument('--inter',type=int,dest='inter',default=0,help='flag for the inter between text, range from 1 to 3')
+	parser.add_argument('--bg_gray',type=int,dest='bg_gray',default=-1,help='flag for the background color, default means random')
+	parser.add_argument('--text_gray',type=int,dest='text_gray',default=-1,help='flag for the text color, default means random')
+	parser.add_argument('--text_position',type=float,dest='text_position',default=0,help='flag for the text_position, default means random')
+	parser.add_argument('--offset_left',type=int,dest='offset_left',default=-1,help='flag for the left offset, default means random')
 	args = parser.parse_args()
 	genTextImg(args)
 	
