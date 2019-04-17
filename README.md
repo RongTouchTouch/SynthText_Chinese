@@ -1,3 +1,6 @@
+# A collection of some methods to synthesize Text Image 
+
+
 # SynthText from Ankush
 
 I can no longer maintain this OCR and SynthText project because I change my research domain according to the requirement of my new affiliation.....Anyone want to hold this can tell me , I can give the master to you as long as you can really understand the code in details.
